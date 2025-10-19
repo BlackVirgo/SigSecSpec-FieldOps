@@ -187,11 +187,6 @@ class FieldOfficerApp {
                     <button class="nav-btn" onclick="app.attemptNavigateHome()">← Back to Home</button>
                 </div>
 
-                <div class="mission-details" id="missionDetails" style="display: none;">
-                    <h3>Mission Details</h3>
-                    <div class="mission-details-content" id="missionDetailsContent"></div>
-                </div>
-
                 <div class="dashboard-controls">
                     <button class="control-btn btn-primary" id="startMissionBtn" onclick="app.showStartMissionModal()">
                         Begin Operation
@@ -214,22 +209,40 @@ class FieldOfficerApp {
                     <button class="control-btn btn-danger" id="endMissionBtn" onclick="app.endMission()" disabled>
                         End Mission
                     </button>
+                    <button class="control-btn btn-secondary" id="resetMissionBtn" onclick="app.resetMission()" style="display: none;">
+                        Start New Mission
+                    </button>
                 </div>
 
-                <div class="patrol-stops">
-                    <h3>Patrol Stops</h3>
-                    <div id="patrolStopsList"></div>
-                </div>
-
-                <div class="patrol-stops">
-                    <h3>Incidents</h3>
-                    <div id="incidentsList"></div>
-                </div>
-
-                <div class="patrol-stops" id="missionPOISection" style="display: none;">
-                    <h3>Persons of Interest - Current Location</h3>
-                    <div id="missionPOIList"></div>
-                    <button class="control-btn btn-primary" onclick="app.showMissionPOIModal()">Manage Location POI</button>
+                <div class="mission-mini-monitor" id="missionMiniMonitor" style="display: none;">
+                    <div class="mini-monitor-header">
+                        <h3>Mission Monitor</h3>
+                        <div class="mini-monitor-status" id="miniMonitorStatus">STANDBY</div>
+                    </div>
+                    <div class="mini-monitor-content">
+                        <div class="mini-monitor-section">
+                            <div class="mission-details-mini" id="missionDetailsMini"></div>
+                        </div>
+                        <div class="mini-monitor-section">
+                            <div class="patrol-stops-mini">
+                                <h4>Patrol Stops</h4>
+                                <div id="patrolStopsListMini"></div>
+                            </div>
+                        </div>
+                        <div class="mini-monitor-section">
+                            <div class="incidents-mini">
+                                <h4>Incidents</h4>
+                                <div id="incidentsListMini"></div>
+                            </div>
+                        </div>
+                        <div class="mini-monitor-section" id="missionPOISectionMini" style="display: none;">
+                            <div class="poi-mini">
+                                <h4>Persons of Interest - Current Location</h4>
+                                <div id="missionPOIListMini"></div>
+                                <button class="control-btn btn-primary btn-small" onclick="app.showMissionPOIModal()">Manage Location POI</button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         `;
@@ -249,11 +262,6 @@ class FieldOfficerApp {
                     <button class="nav-btn" onclick="app.attemptNavigateHome()">← Back to Home</button>
                 </div>
 
-                <div class="mission-details" id="missionDetails" style="display: none;">
-                    <h3>Mission Details</h3>
-                    <div class="mission-details-content" id="missionDetailsContent"></div>
-                </div>
-
                 <div class="dashboard-controls">
                     <button class="control-btn btn-primary" id="startMissionBtn" onclick="app.showStartMissionModal()">
                         Start Mission
@@ -267,17 +275,34 @@ class FieldOfficerApp {
                     <button class="control-btn btn-danger" id="endMissionBtn" onclick="app.endMission()" disabled>
                         End Mission
                     </button>
+                    <button class="control-btn btn-secondary" id="resetMissionBtn" onclick="app.resetMission()" style="display: none;">
+                        Start New Mission
+                    </button>
                 </div>
 
-                <div class="patrol-stops">
-                    <h3>Incidents</h3>
-                    <div id="incidentsList"></div>
-                </div>
-
-                <div class="patrol-stops" id="missionPOISection" style="display: none;">
-                    <h3>Persons of Interest - Current Location</h3>
-                    <div id="missionPOIList"></div>
-                    <button class="control-btn btn-primary" onclick="app.showMissionPOIModal()">Manage Location POI</button>
+                <div class="mission-mini-monitor" id="missionMiniMonitor" style="display: none;">
+                    <div class="mini-monitor-header">
+                        <h3>Mission Monitor</h3>
+                        <div class="mini-monitor-status" id="miniMonitorStatus">STANDBY</div>
+                    </div>
+                    <div class="mini-monitor-content">
+                        <div class="mini-monitor-section">
+                            <div class="mission-details-mini" id="missionDetailsMini"></div>
+                        </div>
+                        <div class="mini-monitor-section">
+                            <div class="incidents-mini">
+                                <h4>Incidents</h4>
+                                <div id="incidentsListMini"></div>
+                            </div>
+                        </div>
+                        <div class="mini-monitor-section" id="missionPOISectionMini" style="display: none;">
+                            <div class="poi-mini">
+                                <h4>Persons of Interest - Current Location</h4>
+                                <div id="missionPOIListMini"></div>
+                                <button class="control-btn btn-primary btn-small" onclick="app.showMissionPOIModal()">Manage Location POI</button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         `;
@@ -862,10 +887,47 @@ class FieldOfficerApp {
         this.closeModal();
         this.showNotification('Mission completed successfully! Navigation restrictions removed.');
         
+        // Show reset button
+        const resetBtn = document.getElementById('resetMissionBtn');
+        if (resetBtn) {
+            resetBtn.style.display = 'inline-block';
+        }
+        
         // Show completion summary
         setTimeout(() => {
             this.showMissionSummary();
         }, 1000);
+    }
+
+    resetMission() {
+        // Clear all mission data
+        this.currentMission = null;
+        this.currentPatrolStops = [];
+        this.currentIncidents = [];
+        this.missionStartTime = null;
+        this.isOnSite = false;
+        this.currentSiteStartTime = null;
+        this.currentPatrolStop = null;
+        
+        // Clear from storage
+        this.clearCurrentMission();
+        
+        // Update UI to initial state
+        this.updateUIForInactiveMission();
+        
+        // Hide reset button
+        const resetBtn = document.getElementById('resetMissionBtn');
+        if (resetBtn) {
+            resetBtn.style.display = 'none';
+        }
+        
+        // Hide mini monitor
+        const miniMonitor = document.getElementById('missionMiniMonitor');
+        if (miniMonitor) {
+            miniMonitor.style.display = 'none';
+        }
+        
+        this.showNotification('Ready to start new mission!');
     }
 
     showMissionSummary() {
@@ -1092,64 +1154,75 @@ Report Generated: ${this.formatDateTime(new Date())}`;
     }
 
     updatePatrolStopsList() {
-        const list = document.getElementById('patrolStopsList');
-        if (!list) return;
+        const list = document.getElementById('patrolStopsListMini');
+        if (!list || !this.currentMission) return;
 
         let html = '';
-        this.currentMission.patrolStops.forEach((stop, index) => {
+        if (this.currentMission.patrolStops && this.currentMission.patrolStops.length > 0) {
+            this.currentMission.patrolStops.forEach((stop, index) => {
             html += `
                 <div class="patrol-stop">
-                    <div class="patrol-stop-header">
-                        <div class="patrol-stop-time">${this.formatDateTime(stop.arrivalTime)} - ${this.formatDateTime(stop.departureTime)}</div>
-                        <div class="patrol-stop-location">${stop.location}</div>
+                    <div class="patrol-stop-time">${this.formatDateTime(stop.arrivalTime)} - ${this.formatDateTime(stop.departureTime)}</div>
+                    <div class="patrol-stop-location">${stop.location}</div>
+                    <div style="margin-top: 4px; font-size: 11px;">
+                        ${stop.details || 'No details'}
+                        ${stop.incidents.length > 0 ? ` | Incidents: ${stop.incidents.length}` : ''}
+                        ${stop.checkpoints.length > 0 ? ` | Checkpoints: ${stop.checkpoints.length}` : ''}
                     </div>
-                    <p>${stop.details || 'No details'}</p>
-                    ${stop.incidents.length > 0 ? `<p><strong>Incidents:</strong> ${stop.incidents.length}</p>` : ''}
-                    ${stop.checkpoints.length > 0 ? `<p><strong>Checkpoints:</strong> ${stop.checkpoints.length}</p>` : ''}
                 </div>
             `;
-        });
+            });
+        }
 
-        list.innerHTML = html || '<p>No patrol stops recorded yet.</p>';
+        list.innerHTML = html || '<div style="padding: 8px; font-size: 11px; opacity: 0.7;">No patrol stops recorded yet.</div>';
     }
 
     updateIncidentsList() {
-        const list = document.getElementById('incidentsList');
-        if (!list) return;
+        const list = document.getElementById('incidentsListMini');
+        if (!list || !this.currentMission) return;
 
         let html = '';
         
         // Show general incidents
-        this.currentMission.incidents.forEach(incident => {
+        if (this.currentMission.incidents && this.currentMission.incidents.length > 0) {
+            this.currentMission.incidents.forEach(incident => {
             html += `
                 <div class="patrol-stop">
-                    <div class="patrol-stop-header">
-                        <div class="patrol-stop-time">${this.formatDateTime(incident.time)}</div>
-                        <div class="patrol-stop-location">${incident.location}</div>
+                    <div class="patrol-stop-time">${this.formatDateTime(incident.time)}</div>
+                    <div class="patrol-stop-location">${incident.location}</div>
+                    <div style="margin-top: 4px; font-size: 11px;">
+                        <strong>${incident.type}</strong><br>
+                        ${incident.description}<br>
+                        <strong>Action:</strong> ${incident.action}
                     </div>
-                    <p><strong>${incident.type}</strong></p>
-                    <p>${incident.description}</p>
-                    <p><strong>Action:</strong> ${incident.action}</p>
                 </div>
             `;
-        });
+            });
+        }
 
-        list.innerHTML = html || '<p>No incidents recorded yet.</p>';
+        list.innerHTML = html || '<div style="padding: 8px; font-size: 11px; opacity: 0.7;">No incidents recorded yet.</div>';
     }
 
     updateMissionDetails() {
-        const detailsContainer = document.getElementById('missionDetails');
-        const detailsContent = document.getElementById('missionDetailsContent');
+        const miniMonitor = document.getElementById('missionMiniMonitor');
+        const miniMonitorStatus = document.getElementById('miniMonitorStatus');
+        const detailsContent = document.getElementById('missionDetailsMini');
         
-        if (!detailsContainer || !detailsContent || !this.currentMission) return;
+        if (!miniMonitor || !detailsContent) return;
 
-        if (this.currentMission.status === 'active') {
+        if (this.currentMission && this.currentMission.status === 'active') {
             const details = this.currentMission.details;
             const startTime = this.formatDateTime(this.currentMission.startTime);
             const endTime = this.formatDateTime(this.currentMission.endTime);
             const duration = this.formatDuration(this.currentMission.startTime, new Date());
             
+            // Update status
+            if (miniMonitorStatus) {
+                miniMonitorStatus.textContent = this.isOnSite ? 'ON SITE' : 'ACTIVE';
+            }
+            
             let html = `
+                <h4>Mission Details</h4>
                 <div class="mission-detail-item">
                     <strong>Officer:</strong> ${details.officerName}
                 </div>
@@ -1181,9 +1254,12 @@ Report Generated: ${this.formatDateTime(new Date())}`;
             }
             
             detailsContent.innerHTML = html;
-            detailsContainer.style.display = 'block';
+            miniMonitor.style.display = 'block';
         } else {
-            detailsContainer.style.display = 'none';
+            if (miniMonitorStatus) {
+                miniMonitorStatus.textContent = 'STANDBY';
+            }
+            miniMonitor.style.display = 'none';
         }
     }
 
@@ -1210,15 +1286,21 @@ Report Generated: ${this.formatDateTime(new Date())}`;
         if (endMissionBtn) endMissionBtn.disabled = true;
         if (checkpointBtn) checkpointBtn.disabled = true;
 
-        // Hide mission details
+        // Hide mission details and mini monitor
         this.updateMissionDetails();
         
         // Hide mission POI section
         this.hideMissionPOISection();
+        
+        // Hide reset button
+        const resetBtn = document.getElementById('resetMissionBtn');
+        if (resetBtn) {
+            resetBtn.style.display = 'none';
+        }
     }
 
     showMissionPOISection() {
-        const poiSection = document.getElementById('missionPOISection');
+        const poiSection = document.getElementById('missionPOISectionMini');
         if (poiSection && this.currentMission && this.currentMission.status === 'active') {
             poiSection.style.display = 'block';
             this.updateMissionPOIList();
@@ -1226,32 +1308,32 @@ Report Generated: ${this.formatDateTime(new Date())}`;
     }
 
     hideMissionPOISection() {
-        const poiSection = document.getElementById('missionPOISection');
+        const poiSection = document.getElementById('missionPOISectionMini');
         if (poiSection) {
             poiSection.style.display = 'none';
         }
     }
 
     updateMissionPOIList() {
-        const list = document.getElementById('missionPOIList');
+        const list = document.getElementById('missionPOIListMini');
         if (!list || !this.currentMission) return;
 
         let html = '';
         
         if (!this.currentMission.locationPOI || this.currentMission.locationPOI.length === 0) {
-            html = '<p>No persons of interest assigned to this location.</p>';
+            html = '<div style="padding: 8px; font-size: 11px; opacity: 0.7;">No persons of interest assigned to this location.</div>';
         } else {
             this.currentMission.locationPOI.forEach(poiId => {
                 const poi = this.personsOfInterest.find(p => p.id === poiId);
                 if (poi) {
                     html += `
-                        <div class="mission-poi-item">
-                            <div class="poi-header">
-                                <div class="poi-name">${poi.name}</div>
-                                <div class="poi-status ${poi.status.toLowerCase()}">${poi.status}</div>
+                        <div class="patrol-stop">
+                            <div class="patrol-stop-time">${poi.name}</div>
+                            <div class="patrol-stop-location">${poi.status}</div>
+                            <div style="margin-top: 4px; font-size: 11px;">
+                                <strong>Description:</strong> ${poi.description}<br>
+                                <strong>Last Known:</strong> ${poi.lastLocation || 'Unknown'}
                             </div>
-                            <p><strong>Description:</strong> ${poi.description}</p>
-                            <p><strong>Last Known:</strong> ${poi.lastLocation || 'Unknown'}</p>
                         </div>
                     `;
                 }
