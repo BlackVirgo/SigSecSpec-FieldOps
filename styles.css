@@ -1185,6 +1185,8 @@ header {
     text-transform: uppercase;
     letter-spacing: 0.5px;
     transition: all 0.2s;
+    font-size: 10px;
+    padding: 4px 8px;
 }
 
 /* Desktop Mission Logs - Terminal Style */
@@ -1278,6 +1280,252 @@ header {
     }
 }
 
+/* Mission Mini Monitor Styles */
+.mission-mini-monitor {
+    margin-top: 20px;
+    border-radius: 8px;
+    overflow: hidden;
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.mini-monitor-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    margin-bottom: 0;
+}
+
+.mini-monitor-status {
+    font-weight: bold;
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: 1px;
+    padding: 4px 8px;
+    border-radius: 12px;
+}
+
+.mini-monitor-content {
+    padding: 16px;
+    display: grid;
+    gap: 16px;
+}
+
+.mini-monitor-section {
+    padding: 12px;
+    border-radius: 6px;
+}
+
+.mini-monitor-section h4 {
+    margin-bottom: 8px;
+    font-size: 0.9em;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.mission-details-mini .mission-detail-item {
+    padding: 6px 10px;
+    margin-bottom: 6px;
+    border-radius: 4px;
+    font-size: 12px;
+    line-height: 1.3;
+}
+
+.patrol-stops-mini .patrol-stop,
+.incidents-mini .patrol-stop {
+    padding: 8px 10px;
+    margin-bottom: 6px;
+    border-radius: 4px;
+    font-size: 12px;
+    line-height: 1.3;
+}
+
+.patrol-stop-time {
+    font-weight: bold;
+    font-size: 11px;
+}
+
+.patrol-stop-location {
+    font-size: 10px;
+    opacity: 0.8;
+    text-transform: uppercase;
+}
+
+/* Desktop Mini Monitor - Terminal Style */
+@media (min-width: 1024px) {
+    .mission-mini-monitor {
+        background: var(--desktop-bg-secondary);
+        border: 2px solid var(--desktop-border);
+        border-radius: 4px;
+        box-shadow: 
+            inset 0 1px 0 rgba(255, 255, 255, 0.1),
+            0 4px 8px rgba(0, 0, 0, 0.5);
+    }
+    
+    .mini-monitor-header {
+        background: var(--desktop-bg-primary);
+        border-bottom: 1px solid var(--desktop-border);
+    }
+    
+    .mini-monitor-header h3 {
+        color: var(--desktop-text-primary);
+        font-family: 'Courier New', monospace;
+        font-size: 1.1em;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin: 0;
+    }
+    
+    .mini-monitor-header h3::before {
+        content: '> ';
+        color: var(--desktop-success);
+    }
+    
+    .mini-monitor-status {
+        background: var(--desktop-bg-tertiary);
+        border: 1px solid var(--desktop-border);
+        color: var(--desktop-success);
+        font-family: 'Courier New', monospace;
+    }
+    
+    .mini-monitor-status::before {
+        content: '● ';
+        animation: blink 1s infinite;
+    }
+    
+    .mini-monitor-content {
+        background: var(--desktop-bg-primary);
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    }
+    
+    .mini-monitor-section {
+        background: var(--desktop-bg-tertiary);
+        border: 1px solid var(--desktop-border);
+        border-left: 3px solid var(--desktop-accent);
+    }
+    
+    .mini-monitor-section h4 {
+        color: var(--desktop-text-primary);
+        font-family: 'Courier New', monospace;
+    }
+    
+    .mini-monitor-section h4::before {
+        content: '> ';
+        color: var(--desktop-accent);
+    }
+    
+    .mission-details-mini .mission-detail-item {
+        background: var(--desktop-bg-primary);
+        border: 1px solid var(--desktop-border);
+        color: var(--desktop-text-primary);
+        font-family: 'Courier New', monospace;
+    }
+    
+    .mission-details-mini .mission-detail-item strong {
+        color: var(--desktop-success);
+    }
+    
+    .patrol-stops-mini .patrol-stop,
+    .incidents-mini .patrol-stop {
+        background: var(--desktop-bg-primary);
+        border: 1px solid var(--desktop-border);
+        border-left: 3px solid var(--desktop-accent);
+        color: var(--desktop-text-primary);
+        font-family: 'Courier New', monospace;
+    }
+    
+    .patrol-stop-time {
+        color: var(--desktop-success);
+        font-family: 'Courier New', monospace;
+    }
+    
+    .patrol-stop-location {
+        color: var(--desktop-text-muted);
+        font-family: 'Courier New', monospace;
+    }
+}
+
+/* Mobile Mini Monitor - Card Style */
+@media (max-width: 1023px) {
+    .mission-mini-monitor {
+        background: var(--mobile-bg-secondary);
+        border-radius: 16px;
+        border: 1px solid var(--mobile-border);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    }
+    
+    .mini-monitor-header {
+        background: var(--mobile-bg-tertiary);
+        border-bottom: 1px solid var(--mobile-border);
+    }
+    
+    .mini-monitor-header h3 {
+        color: var(--mobile-text-primary);
+        font-size: 1.2em;
+        font-weight: 600;
+        margin: 0;
+    }
+    
+    .mini-monitor-status {
+        background: var(--mobile-accent);
+        color: white;
+    }
+    
+    .mini-monitor-content {
+        grid-template-columns: 1fr;
+    }
+    
+    .mini-monitor-section {
+        background: var(--mobile-bg-tertiary);
+        border: 1px solid var(--mobile-border);
+        border-left: 4px solid var(--mobile-accent);
+    }
+    
+    .mini-monitor-section h4 {
+        color: var(--mobile-text-primary);
+        font-weight: 600;
+    }
+    
+    .mission-details-mini .mission-detail-item {
+        background: var(--mobile-bg-secondary);
+        border: 1px solid var(--mobile-border);
+        color: var(--mobile-text-primary);
+    }
+    
+    .mission-details-mini .mission-detail-item strong {
+        color: var(--mobile-accent);
+    }
+    
+    .patrol-stops-mini .patrol-stop,
+    .incidents-mini .patrol-stop {
+        background: var(--mobile-bg-secondary);
+        border: 1px solid var(--mobile-border);
+        border-left: 4px solid var(--mobile-accent);
+        color: var(--mobile-text-primary);
+    }
+    
+    .patrol-stop-time {
+        color: var(--mobile-text-primary);
+        font-weight: 600;
+    }
+    
+    .patrol-stop-location {
+        color: var(--mobile-text-muted);
+    }
+}
+
 /* Additional Mobile Responsive Adjustments */
 @media (max-width: 768px) {
     .container {
@@ -1305,6 +1553,20 @@ header {
     
     .form-actions button {
         width: 100%;
+    }
+    
+    .mini-monitor-content {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+    
+    .mini-monitor-section {
+        padding: 10px;
+    }
+    
+    .mini-monitor-section h4 {
+        font-size: 0.85em;
+        margin-bottom: 6px;
     }
 }
 
