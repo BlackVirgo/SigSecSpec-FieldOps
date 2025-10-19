@@ -159,7 +159,7 @@ header {
     }
     
     h1::before {
-        content: '[POLICE DB] ';
+        content: '[SIGSECSPEC DB] ';
         color: var(--desktop-accent);
     }
 }
@@ -754,6 +754,86 @@ header {
     }
 }
 
+.mission-details {
+    margin-bottom: 25px;
+    padding: 20px;
+    border-radius: 8px;
+}
+
+.mission-details h3 {
+    margin-bottom: 15px;
+    font-size: 1.2em;
+    font-weight: bold;
+}
+
+.mission-details-content {
+    display: grid;
+    gap: 10px;
+}
+
+.mission-detail-item {
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+/* Desktop Mission Details - Terminal Style */
+@media (min-width: 1024px) {
+    .mission-details {
+        background: var(--desktop-bg-primary);
+        border: 1px solid var(--desktop-border);
+        border-left: 3px solid var(--desktop-success);
+    }
+    
+    .mission-details h3 {
+        color: var(--desktop-text-primary);
+        font-family: 'Courier New', monospace;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    
+    .mission-details h3::before {
+        content: '> ';
+        color: var(--desktop-success);
+    }
+    
+    .mission-detail-item {
+        background: var(--desktop-bg-tertiary);
+        border: 1px solid var(--desktop-border);
+        color: var(--desktop-text-primary);
+        font-family: 'Courier New', monospace;
+        font-size: 12px;
+    }
+    
+    .mission-detail-item strong {
+        color: var(--desktop-success);
+    }
+}
+
+/* Mobile Mission Details - Card Style */
+@media (max-width: 1023px) {
+    .mission-details {
+        background: var(--mobile-bg-tertiary);
+        border: 1px solid var(--mobile-border);
+        border-left: 4px solid var(--mobile-accent);
+    }
+    
+    .mission-details h3 {
+        color: var(--mobile-text-primary);
+        font-weight: 600;
+    }
+    
+    .mission-detail-item {
+        background: var(--mobile-bg-secondary);
+        border: 1px solid var(--mobile-border);
+        color: var(--mobile-text-primary);
+    }
+    
+    .mission-detail-item strong {
+        color: var(--mobile-accent);
+    }
+}
+
 .patrol-stops {
     margin-top: 25px;
 }
@@ -1289,6 +1369,193 @@ header {
     @keyframes scanline {
         0% { transform: translateY(-100vh); }
         100% { transform: translateY(100vh); }
+    }
+}
+
+/* POI and Location Item Styles */
+.poi-item, .location-item {
+    margin-bottom: 16px;
+    padding: 16px;
+    border-radius: 8px;
+}
+
+.poi-header, .location-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.poi-name, .location-name {
+    font-weight: bold;
+    font-size: 1.1em;
+}
+
+.poi-status, .location-type {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.poi-actions, .location-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.modal-actions {
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+/* Desktop POI/Location Styles - Terminal Style */
+@media (min-width: 1024px) {
+    .poi-item, .location-item {
+        background: var(--desktop-bg-primary);
+        border: 1px solid var(--desktop-border);
+        border-left: 3px solid var(--desktop-accent);
+    }
+    
+    .poi-name, .location-name {
+        color: var(--desktop-text-primary);
+        font-family: 'Courier New', monospace;
+    }
+    
+    .poi-status {
+        background: var(--desktop-bg-tertiary);
+        border: 1px solid var(--desktop-border);
+        color: var(--desktop-text-primary);
+        font-family: 'Courier New', monospace;
+    }
+    
+    .poi-status.active {
+        color: var(--desktop-danger);
+        border-color: var(--desktop-danger);
+    }
+    
+    .poi-status.inactive {
+        color: var(--desktop-text-muted);
+        border-color: var(--desktop-text-muted);
+    }
+    
+    .poi-status.apprehended {
+        color: var(--desktop-success);
+        border-color: var(--desktop-success);
+    }
+    
+    .location-type {
+        background: var(--desktop-bg-tertiary);
+        border: 1px solid var(--desktop-border);
+        color: var(--desktop-accent);
+        font-family: 'Courier New', monospace;
+    }
+    
+    .poi-item p, .location-item p {
+        color: var(--desktop-text-primary);
+        font-family: 'Courier New', monospace;
+        font-size: 12px;
+        margin: 4px 0;
+    }
+}
+
+/* Mobile POI/Location Styles - Card Style */
+@media (max-width: 1023px) {
+    .poi-item, .location-item {
+        background: var(--mobile-bg-tertiary);
+        border: 1px solid var(--mobile-border);
+        border-left: 4px solid var(--mobile-accent);
+    }
+    
+    .poi-name, .location-name {
+        color: var(--mobile-text-primary);
+    }
+    
+    .poi-status {
+        background: var(--mobile-bg-secondary);
+        color: var(--mobile-text-primary);
+    }
+    
+    .poi-status.active {
+        background: var(--mobile-danger);
+        color: white;
+    }
+    
+    .poi-status.inactive {
+        background: var(--mobile-text-muted);
+        color: white;
+    }
+    
+    .poi-status.apprehended {
+        background: var(--mobile-success);
+        color: white;
+    }
+    
+    .location-type {
+        background: var(--mobile-accent);
+        color: white;
+    }
+    
+    .poi-item p, .location-item p {
+        color: var(--mobile-text-primary);
+        margin: 6px 0;
+    }
+}
+
+/* Mission POI Item Styles */
+.mission-poi-item {
+    margin-bottom: 12px;
+    padding: 12px;
+    border-radius: 6px;
+}
+
+.assigned-poi, .available-poi {
+    margin-bottom: 20px;
+}
+
+.assigned-poi h3, .available-poi h3 {
+    margin-bottom: 12px;
+}
+
+/* Desktop Mission POI Styles */
+@media (min-width: 1024px) {
+    .mission-poi-item {
+        background: var(--desktop-bg-tertiary);
+        border: 1px solid var(--desktop-border);
+        border-left: 3px solid var(--desktop-warning);
+    }
+    
+    .mission-poi-item .poi-name {
+        color: var(--desktop-text-primary);
+        font-family: 'Courier New', monospace;
+        font-weight: bold;
+    }
+    
+    .mission-poi-item p {
+        color: var(--desktop-text-primary);
+        font-family: 'Courier New', monospace;
+        font-size: 12px;
+        margin: 4px 0;
+    }
+}
+
+/* Mobile Mission POI Styles */
+@media (max-width: 1023px) {
+    .mission-poi-item {
+        background: var(--mobile-bg-secondary);
+        border: 1px solid var(--mobile-border);
+        border-left: 4px solid var(--mobile-warning);
+    }
+    
+    .mission-poi-item .poi-name {
+        color: var(--mobile-text-primary);
+        font-weight: 600;
+    }
+    
+    .mission-poi-item p {
+        color: var(--mobile-text-primary);
+        margin: 6px 0;
     }
 }
 
