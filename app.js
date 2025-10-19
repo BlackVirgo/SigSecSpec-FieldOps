@@ -9,6 +9,8 @@ class FieldOfficerApp {
         this.currentSiteStartTime = null;
         this.currentPatrolStop = null;
         this.autoSaveInterval = null;
+        this.personsOfInterest = this.loadPersonsOfInterest();
+        this.locations = this.loadLocations();
         
         this.init();
     }
@@ -52,7 +54,7 @@ class FieldOfficerApp {
             z-index: 1000;
             letter-spacing: 1px;
         `;
-        status.innerHTML = '● SYSTEM ONLINE | DB CONNECTED';
+        status.innerHTML = '● SIGSECSPEC SYSTEM ONLINE | DB CONNECTED';
         document.body.appendChild(status);
     }
     
@@ -109,6 +111,14 @@ class FieldOfficerApp {
         // Navigation
         document.getElementById('viewLogsBtn').addEventListener('click', () => {
             this.showMissionLogs();
+        });
+
+        document.getElementById('viewPOIBtn').addEventListener('click', () => {
+            this.showPersonsOfInterest();
+        });
+
+        document.getElementById('viewLocationsBtn').addEventListener('click', () => {
+            this.showLocations();
         });
 
         // Modal close
@@ -177,6 +187,11 @@ class FieldOfficerApp {
                     <button class="nav-btn" onclick="app.attemptNavigateHome()">← Back to Home</button>
                 </div>
 
+                <div class="mission-details" id="missionDetails" style="display: none;">
+                    <h3>Mission Details</h3>
+                    <div class="mission-details-content" id="missionDetailsContent"></div>
+                </div>
+
                 <div class="dashboard-controls">
                     <button class="control-btn btn-primary" id="startMissionBtn" onclick="app.showStartMissionModal()">
                         Begin Operation
@@ -190,7 +205,7 @@ class FieldOfficerApp {
                     <button class="control-btn btn-primary" onclick="app.showIncidentModal()">
                         Incident Report
                     </button>
-                    <button class="control-btn btn-primary" onclick="app.showCheckpointModal()">
+                    <button class="control-btn btn-primary" id="addCheckpointBtn" onclick="app.showCheckpointModal()" disabled>
                         Add Checkpoint
                     </button>
                     <button class="control-btn btn-warning" onclick="app.showMissionReportModal()" id="missionReportBtn" disabled>
@@ -210,6 +225,12 @@ class FieldOfficerApp {
                     <h3>Incidents</h3>
                     <div id="incidentsList"></div>
                 </div>
+
+                <div class="patrol-stops" id="missionPOISection" style="display: none;">
+                    <h3>Persons of Interest - Current Location</h3>
+                    <div id="missionPOIList"></div>
+                    <button class="control-btn btn-primary" onclick="app.showMissionPOIModal()">Manage Location POI</button>
+                </div>
             </div>
         `;
     }
@@ -226,6 +247,11 @@ class FieldOfficerApp {
                         <div class="mission-status status-inactive" id="missionStatus">Inactive</div>
                     </div>
                     <button class="nav-btn" onclick="app.attemptNavigateHome()">← Back to Home</button>
+                </div>
+
+                <div class="mission-details" id="missionDetails" style="display: none;">
+                    <h3>Mission Details</h3>
+                    <div class="mission-details-content" id="missionDetailsContent"></div>
                 </div>
 
                 <div class="dashboard-controls">
@@ -246,6 +272,12 @@ class FieldOfficerApp {
                 <div class="patrol-stops">
                     <h3>Incidents</h3>
                     <div id="incidentsList"></div>
+                </div>
+
+                <div class="patrol-stops" id="missionPOISection" style="display: none;">
+                    <h3>Persons of Interest - Current Location</h3>
+                    <div id="missionPOIList"></div>
+                    <button class="control-btn btn-primary" onclick="app.showMissionPOIModal()">Manage Location POI</button>
                 </div>
             </div>
         `;
@@ -323,6 +355,9 @@ class FieldOfficerApp {
             notes: formData.get('missionNotes') || ''
         };
         
+        // Initialize location-specific POI list
+        this.currentMission.locationPOI = [];
+        
         this.missionStartTime = this.currentMission.startTime;
         this.saveCurrentMission();
         
@@ -337,8 +372,20 @@ class FieldOfficerApp {
             document.getElementById('onSiteBtn').disabled = false;
         }
         
+        // Enable checkpoint button only when on site for patrol missions
+        const checkpointBtn = document.getElementById('addCheckpointBtn');
+        if (checkpointBtn) {
+            checkpointBtn.disabled = !this.isOnSite;
+        }
+        
         // Add navigation restriction indicator
         this.addNavigationWarning();
+        
+        // Show mission details
+        this.updateMissionDetails();
+        
+        // Show mission POI section
+        this.showMissionPOISection();
         
         this.closeModal();
         this.showNotification('Mission started successfully! Navigation is now restricted.');
@@ -421,6 +468,12 @@ class FieldOfficerApp {
         document.getElementById('onSiteBtn').disabled = true;
         document.getElementById('offSiteBtn').disabled = false;
         
+        // Enable checkpoint button when on site
+        const checkpointBtn = document.getElementById('addCheckpointBtn');
+        if (checkpointBtn) {
+            checkpointBtn.disabled = false;
+        }
+        
         this.closeModal();
         this.showNotification('Now on site at ' + formData.get('siteLocation'));
     }
@@ -446,6 +499,12 @@ class FieldOfficerApp {
         document.getElementById('missionStatus').className = 'mission-status status-active';
         document.getElementById('onSiteBtn').disabled = false;
         document.getElementById('offSiteBtn').disabled = true;
+        
+        // Disable checkpoint button when off site
+        const checkpointBtn = document.getElementById('addCheckpointBtn');
+        if (checkpointBtn) {
+            checkpointBtn.disabled = true;
+        }
         
         this.updatePatrolStopsList();
         this.showNotification('Left site - now in transit');
@@ -797,6 +856,9 @@ class FieldOfficerApp {
         // Remove navigation restriction indicator
         this.removeNavigationWarning();
         
+        // Update UI to show inactive status
+        this.updateUIForInactiveMission();
+        
         this.closeModal();
         this.showNotification('Mission completed successfully! Navigation restrictions removed.');
         
@@ -912,7 +974,7 @@ class FieldOfficerApp {
     }
 
     generateMissionReport(mission) {
-        let report = `FIELD OFFICER MISSION REPORT
+        let report = `SIGSECSPEC FIELD OFFICER MISSION REPORT
 ========================================
 
 Mission ID: ${mission.id}
@@ -1073,6 +1135,230 @@ Report Generated: ${this.formatDateTime(new Date())}`;
         });
 
         list.innerHTML = html || '<p>No incidents recorded yet.</p>';
+    }
+
+    updateMissionDetails() {
+        const detailsContainer = document.getElementById('missionDetails');
+        const detailsContent = document.getElementById('missionDetailsContent');
+        
+        if (!detailsContainer || !detailsContent || !this.currentMission) return;
+
+        if (this.currentMission.status === 'active') {
+            const details = this.currentMission.details;
+            const startTime = this.formatDateTime(this.currentMission.startTime);
+            const endTime = this.formatDateTime(this.currentMission.endTime);
+            const duration = this.formatDuration(this.currentMission.startTime, new Date());
+            
+            let html = `
+                <div class="mission-detail-item">
+                    <strong>Officer:</strong> ${details.officerName}
+                </div>
+                <div class="mission-detail-item">
+                    <strong>Start Time:</strong> ${startTime}
+                </div>
+                <div class="mission-detail-item">
+                    <strong>Expected End:</strong> ${endTime}
+                </div>
+                <div class="mission-detail-item">
+                    <strong>Duration:</strong> ${duration}
+                </div>
+            `;
+            
+            if (details.patrolRoute) {
+                html += `
+                    <div class="mission-detail-item">
+                        <strong>Patrol Route:</strong> ${details.patrolRoute}
+                    </div>
+                `;
+            }
+            
+            if (details.notes) {
+                html += `
+                    <div class="mission-detail-item">
+                        <strong>Notes:</strong> ${details.notes}
+                    </div>
+                `;
+            }
+            
+            detailsContent.innerHTML = html;
+            detailsContainer.style.display = 'block';
+        } else {
+            detailsContainer.style.display = 'none';
+        }
+    }
+
+    updateUIForInactiveMission() {
+        // Update mission status
+        const statusElement = document.getElementById('missionStatus');
+        if (statusElement) {
+            statusElement.textContent = 'Inactive';
+            statusElement.className = 'mission-status status-inactive';
+        }
+
+        // Reset all buttons to initial state
+        const startMissionBtn = document.getElementById('startMissionBtn');
+        const onSiteBtn = document.getElementById('onSiteBtn');
+        const offSiteBtn = document.getElementById('offSiteBtn');
+        const missionReportBtn = document.getElementById('missionReportBtn');
+        const endMissionBtn = document.getElementById('endMissionBtn');
+        const checkpointBtn = document.getElementById('addCheckpointBtn');
+
+        if (startMissionBtn) startMissionBtn.disabled = false;
+        if (onSiteBtn) onSiteBtn.disabled = true;
+        if (offSiteBtn) offSiteBtn.disabled = true;
+        if (missionReportBtn) missionReportBtn.disabled = true;
+        if (endMissionBtn) endMissionBtn.disabled = true;
+        if (checkpointBtn) checkpointBtn.disabled = true;
+
+        // Hide mission details
+        this.updateMissionDetails();
+        
+        // Hide mission POI section
+        this.hideMissionPOISection();
+    }
+
+    showMissionPOISection() {
+        const poiSection = document.getElementById('missionPOISection');
+        if (poiSection && this.currentMission && this.currentMission.status === 'active') {
+            poiSection.style.display = 'block';
+            this.updateMissionPOIList();
+        }
+    }
+
+    hideMissionPOISection() {
+        const poiSection = document.getElementById('missionPOISection');
+        if (poiSection) {
+            poiSection.style.display = 'none';
+        }
+    }
+
+    updateMissionPOIList() {
+        const list = document.getElementById('missionPOIList');
+        if (!list || !this.currentMission) return;
+
+        let html = '';
+        
+        if (!this.currentMission.locationPOI || this.currentMission.locationPOI.length === 0) {
+            html = '<p>No persons of interest assigned to this location.</p>';
+        } else {
+            this.currentMission.locationPOI.forEach(poiId => {
+                const poi = this.personsOfInterest.find(p => p.id === poiId);
+                if (poi) {
+                    html += `
+                        <div class="mission-poi-item">
+                            <div class="poi-header">
+                                <div class="poi-name">${poi.name}</div>
+                                <div class="poi-status ${poi.status.toLowerCase()}">${poi.status}</div>
+                            </div>
+                            <p><strong>Description:</strong> ${poi.description}</p>
+                            <p><strong>Last Known:</strong> ${poi.lastLocation || 'Unknown'}</p>
+                        </div>
+                    `;
+                }
+            });
+        }
+
+        list.innerHTML = html;
+    }
+
+    showMissionPOIModal() {
+        const modal = document.getElementById('logsModal');
+        const modalContent = modal.querySelector('.modal-content');
+        
+        // Get available POI (not already assigned to this location)
+        const assignedPOI = this.currentMission.locationPOI || [];
+        const availablePOI = this.personsOfInterest.filter(poi => !assignedPOI.includes(poi.id));
+        
+        let availableHtml = '';
+        if (availablePOI.length === 0) {
+            availableHtml = '<p>No additional POI available to assign.</p>';
+        } else {
+            availablePOI.forEach(poi => {
+                availableHtml += `
+                    <div class="poi-item">
+                        <div class="poi-header">
+                            <div class="poi-name">${poi.name}</div>
+                            <div class="poi-status ${poi.status.toLowerCase()}">${poi.status}</div>
+                        </div>
+                        <p><strong>Description:</strong> ${poi.description}</p>
+                        <div class="poi-actions">
+                            <button class="btn-small btn-primary" onclick="app.assignPOIToLocation('${poi.id}')">Assign to Location</button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        let assignedHtml = '';
+        if (assignedPOI.length === 0) {
+            assignedHtml = '<p>No POI assigned to this location.</p>';
+        } else {
+            assignedPOI.forEach(poiId => {
+                const poi = this.personsOfInterest.find(p => p.id === poiId);
+                if (poi) {
+                    assignedHtml += `
+                        <div class="poi-item">
+                            <div class="poi-header">
+                                <div class="poi-name">${poi.name}</div>
+                                <div class="poi-status ${poi.status.toLowerCase()}">${poi.status}</div>
+                            </div>
+                            <p><strong>Description:</strong> ${poi.description}</p>
+                            <div class="poi-actions">
+                                <button class="btn-small btn-danger" onclick="app.removePOIFromLocation('${poi.id}')">Remove from Location</button>
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+        }
+        
+        modalContent.innerHTML = `
+            <div class="modal-header">
+                <h2>Manage Location POI</h2>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <h3>Currently Assigned to This Location</h3>
+                <div class="assigned-poi">
+                    ${assignedHtml}
+                </div>
+                
+                <h3>Available POI to Assign</h3>
+                <div class="available-poi">
+                    ${availableHtml}
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" class="btn-secondary" onclick="app.closeModal()">Close</button>
+                </div>
+            </div>
+        `;
+
+        modal.style.display = 'block';
+    }
+
+    assignPOIToLocation(poiId) {
+        if (!this.currentMission.locationPOI) {
+            this.currentMission.locationPOI = [];
+        }
+        
+        if (!this.currentMission.locationPOI.includes(poiId)) {
+            this.currentMission.locationPOI.push(poiId);
+            this.saveCurrentMission();
+            this.updateMissionPOIList();
+            this.showNotification('POI assigned to location successfully!');
+            this.showMissionPOIModal(); // Refresh the modal
+        }
+    }
+
+    removePOIFromLocation(poiId) {
+        if (this.currentMission.locationPOI) {
+            this.currentMission.locationPOI = this.currentMission.locationPOI.filter(id => id !== poiId);
+            this.saveCurrentMission();
+            this.updateMissionPOIList();
+            this.showNotification('POI removed from location successfully!');
+            this.showMissionPOIModal(); // Refresh the modal
+        }
     }
 
     copyToClipboard(elementId) {
@@ -1245,6 +1531,12 @@ Report Generated: ${this.formatDateTime(new Date())}`;
                     this.showGenericDashboard(this.currentMission.type);
                 }
                 this.updateIncidentsList();
+                this.updateMissionDetails();
+                
+                // Show mission POI section if mission is active
+                if (this.currentMission.status === 'active') {
+                    this.showMissionPOISection();
+                }
                 
                 // Restore UI state
                 if (this.currentMission.status === 'active') {
@@ -1257,6 +1549,12 @@ Report Generated: ${this.formatDateTime(new Date())}`;
                     if (this.currentMission.type === 'patrol') {
                         document.getElementById('onSiteBtn').disabled = this.isOnSite || !!this.currentMission.report;
                         document.getElementById('offSiteBtn').disabled = !this.isOnSite;
+                        
+                        // Restore checkpoint button state
+                        const checkpointBtn = document.getElementById('addCheckpointBtn');
+                        if (checkpointBtn) {
+                            checkpointBtn.disabled = !this.isOnSite;
+                        }
                     }
                     
                     // Restore navigation warning for active missions
@@ -1512,6 +1810,475 @@ Report Generated: ${this.formatDateTime(new Date())}`;
                 console.log('Saved on page hide');
             }
         });
+    }
+
+    loadPersonsOfInterest() {
+        try {
+            const saved = localStorage.getItem('fieldOfficerPOI');
+            return saved ? JSON.parse(saved) : [];
+        } catch (e) {
+            console.error('Error loading POI:', e);
+            return [];
+        }
+    }
+
+    savePersonsOfInterest() {
+        try {
+            localStorage.setItem('fieldOfficerPOI', JSON.stringify(this.personsOfInterest));
+            return true;
+        } catch (e) {
+            console.error('Error saving POI:', e);
+            this.showNotification('Error saving POI data', 'error');
+            return false;
+        }
+    }
+
+    loadLocations() {
+        try {
+            const saved = localStorage.getItem('fieldOfficerLocations');
+            return saved ? JSON.parse(saved) : [];
+        } catch (e) {
+            console.error('Error loading locations:', e);
+            return [];
+        }
+    }
+
+    saveLocations() {
+        try {
+            localStorage.setItem('fieldOfficerLocations', JSON.stringify(this.locations));
+            return true;
+        } catch (e) {
+            console.error('Error saving locations:', e);
+            this.showNotification('Error saving location data', 'error');
+            return false;
+        }
+    }
+
+    showPersonsOfInterest() {
+        const modal = document.getElementById('logsModal');
+        const modalContent = modal.querySelector('.modal-content');
+        
+        let poiHtml = '';
+        
+        if (this.personsOfInterest.length === 0) {
+            poiHtml = '<p>No persons of interest found.</p>';
+        } else {
+            this.personsOfInterest.forEach(poi => {
+                poiHtml += `
+                    <div class="poi-item">
+                        <div class="poi-header">
+                            <div class="poi-name">${poi.name}</div>
+                            <div class="poi-status ${poi.status.toLowerCase()}">${poi.status}</div>
+                        </div>
+                        <p><strong>Description:</strong> ${poi.description}</p>
+                        <p><strong>Last Known Location:</strong> ${poi.lastLocation || 'Unknown'}</p>
+                        <p><strong>Added:</strong> ${this.formatDateTime(poi.dateAdded)}</p>
+                        <div class="poi-actions">
+                            <button class="btn-small btn-primary" onclick="app.editPOI('${poi.id}')">Edit</button>
+                            <button class="btn-small btn-danger" onclick="app.deletePOI('${poi.id}')">Remove</button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+        
+        modalContent.innerHTML = `
+            <div class="modal-header">
+                <h2>Persons of Interest</h2>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="modal-actions">
+                    <button class="btn-primary" onclick="app.showAddPOIModal()">Add New POI</button>
+                </div>
+                <div class="poi-list">
+                    ${poiHtml}
+                </div>
+            </div>
+        `;
+
+        modal.style.display = 'block';
+    }
+
+    showAddPOIModal() {
+        const modal = document.getElementById('logsModal');
+        const modalContent = modal.querySelector('.modal-content');
+        
+        modalContent.innerHTML = `
+            <div class="modal-header">
+                <h2>Add Person of Interest</h2>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="addPOIForm">
+                    <div class="form-group">
+                        <label for="poiName">Name:</label>
+                        <input type="text" id="poiName" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="poiDescription">Description:</label>
+                        <textarea id="poiDescription" required placeholder="Physical description, identifying features, etc..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="poiStatus">Status:</label>
+                        <select id="poiStatus" required>
+                            <option value="Active">Active</option>
+                            <option value="Inactive">Inactive</option>
+                            <option value="Apprehended">Apprehended</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="poiLastLocation">Last Known Location (Optional):</label>
+                        <input type="text" id="poiLastLocation">
+                    </div>
+                    <div class="form-group">
+                        <label for="poiNotes">Additional Notes (Optional):</label>
+                        <textarea id="poiNotes" placeholder="Any additional information..."></textarea>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn-secondary" onclick="app.showPersonsOfInterest()">Cancel</button>
+                        <button type="submit" class="btn-primary">Add POI</button>
+                    </div>
+                </form>
+            </div>
+        `;
+
+        document.getElementById('addPOIForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.addPOI();
+        });
+
+        modal.style.display = 'block';
+    }
+
+    addPOI() {
+        const form = document.getElementById('addPOIForm');
+        const formData = new FormData(form);
+        
+        const poi = {
+            id: 'POI' + Date.now(),
+            name: formData.get('poiName'),
+            description: formData.get('poiDescription'),
+            status: formData.get('poiStatus'),
+            lastLocation: formData.get('poiLastLocation') || '',
+            notes: formData.get('poiNotes') || '',
+            dateAdded: new Date()
+        };
+
+        this.personsOfInterest.push(poi);
+        this.savePersonsOfInterest();
+        
+        this.showNotification('Person of Interest added successfully!');
+        this.showPersonsOfInterest();
+    }
+
+    editPOI(poiId) {
+        const poi = this.personsOfInterest.find(p => p.id === poiId);
+        if (!poi) return;
+
+        const modal = document.getElementById('logsModal');
+        const modalContent = modal.querySelector('.modal-content');
+        
+        modalContent.innerHTML = `
+            <div class="modal-header">
+                <h2>Edit Person of Interest</h2>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="editPOIForm">
+                    <div class="form-group">
+                        <label for="poiName">Name:</label>
+                        <input type="text" id="poiName" value="${poi.name}" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="poiDescription">Description:</label>
+                        <textarea id="poiDescription" required>${poi.description}</textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="poiStatus">Status:</label>
+                        <select id="poiStatus" required>
+                            <option value="Active" ${poi.status === 'Active' ? 'selected' : ''}>Active</option>
+                            <option value="Inactive" ${poi.status === 'Inactive' ? 'selected' : ''}>Inactive</option>
+                            <option value="Apprehended" ${poi.status === 'Apprehended' ? 'selected' : ''}>Apprehended</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="poiLastLocation">Last Known Location:</label>
+                        <input type="text" id="poiLastLocation" value="${poi.lastLocation}">
+                    </div>
+                    <div class="form-group">
+                        <label for="poiNotes">Additional Notes:</label>
+                        <textarea id="poiNotes">${poi.notes}</textarea>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn-secondary" onclick="app.showPersonsOfInterest()">Cancel</button>
+                        <button type="submit" class="btn-primary">Update POI</button>
+                    </div>
+                </form>
+            </div>
+        `;
+
+        document.getElementById('editPOIForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.updatePOI(poiId);
+        });
+
+        modal.style.display = 'block';
+    }
+
+    updatePOI(poiId) {
+        const form = document.getElementById('editPOIForm');
+        const formData = new FormData(form);
+        
+        const poiIndex = this.personsOfInterest.findIndex(p => p.id === poiId);
+        if (poiIndex === -1) return;
+
+        this.personsOfInterest[poiIndex] = {
+            ...this.personsOfInterest[poiIndex],
+            name: formData.get('poiName'),
+            description: formData.get('poiDescription'),
+            status: formData.get('poiStatus'),
+            lastLocation: formData.get('poiLastLocation') || '',
+            notes: formData.get('poiNotes') || '',
+            lastUpdated: new Date()
+        };
+
+        this.savePersonsOfInterest();
+        
+        this.showNotification('Person of Interest updated successfully!');
+        this.showPersonsOfInterest();
+    }
+
+    deletePOI(poiId) {
+        if (confirm('Are you sure you want to remove this Person of Interest?')) {
+            this.personsOfInterest = this.personsOfInterest.filter(p => p.id !== poiId);
+            this.savePersonsOfInterest();
+            
+            this.showNotification('Person of Interest removed successfully!');
+            this.showPersonsOfInterest();
+        }
+    }
+
+    showLocations() {
+        const modal = document.getElementById('logsModal');
+        const modalContent = modal.querySelector('.modal-content');
+        
+        let locationsHtml = '';
+        
+        if (this.locations.length === 0) {
+            locationsHtml = '<p>No locations found.</p>';
+        } else {
+            this.locations.forEach(location => {
+                locationsHtml += `
+                    <div class="location-item">
+                        <div class="location-header">
+                            <div class="location-name">${location.name}</div>
+                            <div class="location-type">${location.type}</div>
+                        </div>
+                        <p><strong>Address:</strong> ${location.address}</p>
+                        <p><strong>Manager:</strong> ${location.manager || 'Not assigned'}</p>
+                        <p><strong>Contact:</strong> ${location.contact || 'Not provided'}</p>
+                        <p><strong>Added:</strong> ${this.formatDateTime(location.dateAdded)}</p>
+                        <div class="location-actions">
+                            <button class="btn-small btn-primary" onclick="app.editLocation('${location.id}')">Edit</button>
+                            <button class="btn-small btn-danger" onclick="app.deleteLocation('${location.id}')">Remove</button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+        
+        modalContent.innerHTML = `
+            <div class="modal-header">
+                <h2>Site/Location Manager</h2>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="modal-actions">
+                    <button class="btn-primary" onclick="app.showAddLocationModal()">Add New Location</button>
+                </div>
+                <div class="locations-list">
+                    ${locationsHtml}
+                </div>
+            </div>
+        `;
+
+        modal.style.display = 'block';
+    }
+
+    showAddLocationModal() {
+        const modal = document.getElementById('logsModal');
+        const modalContent = modal.querySelector('.modal-content');
+        
+        modalContent.innerHTML = `
+            <div class="modal-header">
+                <h2>Add Location/Site</h2>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="addLocationForm">
+                    <div class="form-group">
+                        <label for="locationName">Location Name:</label>
+                        <input type="text" id="locationName" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="locationType">Type:</label>
+                        <select id="locationType" required>
+                            <option value="Office Building">Office Building</option>
+                            <option value="Warehouse">Warehouse</option>
+                            <option value="Retail Store">Retail Store</option>
+                            <option value="Industrial Site">Industrial Site</option>
+                            <option value="Residential Complex">Residential Complex</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="locationAddress">Address:</label>
+                        <textarea id="locationAddress" required placeholder="Full address..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="locationManager">Site Manager:</label>
+                        <input type="text" id="locationManager" placeholder="Manager name">
+                    </div>
+                    <div class="form-group">
+                        <label for="locationContact">Contact Information:</label>
+                        <input type="text" id="locationContact" placeholder="Phone, email, etc.">
+                    </div>
+                    <div class="form-group">
+                        <label for="locationNotes">Additional Notes:</label>
+                        <textarea id="locationNotes" placeholder="Access codes, special instructions, etc..."></textarea>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn-secondary" onclick="app.showLocations()">Cancel</button>
+                        <button type="submit" class="btn-primary">Add Location</button>
+                    </div>
+                </form>
+            </div>
+        `;
+
+        document.getElementById('addLocationForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.addLocation();
+        });
+
+        modal.style.display = 'block';
+    }
+
+    addLocation() {
+        const form = document.getElementById('addLocationForm');
+        const formData = new FormData(form);
+        
+        const location = {
+            id: 'LOC' + Date.now(),
+            name: formData.get('locationName'),
+            type: formData.get('locationType'),
+            address: formData.get('locationAddress'),
+            manager: formData.get('locationManager') || '',
+            contact: formData.get('locationContact') || '',
+            notes: formData.get('locationNotes') || '',
+            dateAdded: new Date()
+        };
+
+        this.locations.push(location);
+        this.saveLocations();
+        
+        this.showNotification('Location added successfully!');
+        this.showLocations();
+    }
+
+    editLocation(locationId) {
+        const location = this.locations.find(l => l.id === locationId);
+        if (!location) return;
+
+        const modal = document.getElementById('logsModal');
+        const modalContent = modal.querySelector('.modal-content');
+        
+        modalContent.innerHTML = `
+            <div class="modal-header">
+                <h2>Edit Location/Site</h2>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="editLocationForm">
+                    <div class="form-group">
+                        <label for="locationName">Location Name:</label>
+                        <input type="text" id="locationName" value="${location.name}" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="locationType">Type:</label>
+                        <select id="locationType" required>
+                            <option value="Office Building" ${location.type === 'Office Building' ? 'selected' : ''}>Office Building</option>
+                            <option value="Warehouse" ${location.type === 'Warehouse' ? 'selected' : ''}>Warehouse</option>
+                            <option value="Retail Store" ${location.type === 'Retail Store' ? 'selected' : ''}>Retail Store</option>
+                            <option value="Industrial Site" ${location.type === 'Industrial Site' ? 'selected' : ''}>Industrial Site</option>
+                            <option value="Residential Complex" ${location.type === 'Residential Complex' ? 'selected' : ''}>Residential Complex</option>
+                            <option value="Other" ${location.type === 'Other' ? 'selected' : ''}>Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="locationAddress">Address:</label>
+                        <textarea id="locationAddress" required>${location.address}</textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="locationManager">Site Manager:</label>
+                        <input type="text" id="locationManager" value="${location.manager}">
+                    </div>
+                    <div class="form-group">
+                        <label for="locationContact">Contact Information:</label>
+                        <input type="text" id="locationContact" value="${location.contact}">
+                    </div>
+                    <div class="form-group">
+                        <label for="locationNotes">Additional Notes:</label>
+                        <textarea id="locationNotes">${location.notes}</textarea>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn-secondary" onclick="app.showLocations()">Cancel</button>
+                        <button type="submit" class="btn-primary">Update Location</button>
+                    </div>
+                </form>
+            </div>
+        `;
+
+        document.getElementById('editLocationForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.updateLocation(locationId);
+        });
+
+        modal.style.display = 'block';
+    }
+
+    updateLocation(locationId) {
+        const form = document.getElementById('editLocationForm');
+        const formData = new FormData(form);
+        
+        const locationIndex = this.locations.findIndex(l => l.id === locationId);
+        if (locationIndex === -1) return;
+
+        this.locations[locationIndex] = {
+            ...this.locations[locationIndex],
+            name: formData.get('locationName'),
+            type: formData.get('locationType'),
+            address: formData.get('locationAddress'),
+            manager: formData.get('locationManager') || '',
+            contact: formData.get('locationContact') || '',
+            notes: formData.get('locationNotes') || '',
+            lastUpdated: new Date()
+        };
+
+        this.saveLocations();
+        
+        this.showNotification('Location updated successfully!');
+        this.showLocations();
+    }
+
+    deleteLocation(locationId) {
+        if (confirm('Are you sure you want to remove this location?')) {
+            this.locations = this.locations.filter(l => l.id !== locationId);
+            this.saveLocations();
+            
+            this.showNotification('Location removed successfully!');
+            this.showLocations();
+        }
     }
 }
 
