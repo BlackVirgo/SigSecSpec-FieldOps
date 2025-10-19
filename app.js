@@ -151,6 +151,42 @@ class FieldOfficerApp {
                         <p>Station administrative operations</p>
                     </div>
                 </div>
+                
+                <div class="mission-mini-monitor" id="missionMiniMonitor">
+                    <div class="mini-monitor-header">
+                        <h3>Mission Monitor</h3>
+                        <div class="mini-monitor-status" id="miniMonitorStatus">INACTIVE</div>
+                    </div>
+                    <div class="mini-monitor-content">
+                        <div class="mini-monitor-section">
+                            <div class="mission-details-mini" id="missionDetailsMini">
+                                <h4>Mission Monitor</h4>
+                                <div class="mission-detail-item inactive-message">
+                                    <strong>Status:</strong> No active mission
+                                </div>
+                                <div class="mission-detail-item inactive-message">
+                                    Select an operation type to begin monitoring
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mini-monitor-section">
+                            <div class="patrol-stops-mini">
+                                <h4>Location Visits</h4>
+                                <div id="patrolStopsListMini">
+                                    <div class="patrol-stop inactive-card">No location visits recorded yet.</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mini-monitor-section">
+                            <div class="incidents-mini">
+                                <h4>Incidents</h4>
+                                <div id="incidentsListMini">
+                                    <div class="patrol-stop inactive-card">No incidents recorded yet.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         `;
     }
@@ -288,6 +324,12 @@ class FieldOfficerApp {
                     <div class="mini-monitor-content">
                         <div class="mini-monitor-section">
                             <div class="mission-details-mini" id="missionDetailsMini"></div>
+                        </div>
+                        <div class="mini-monitor-section">
+                            <div class="patrol-stops-mini">
+                                <h4>Location Visits</h4>
+                                <div id="patrolStopsListMini"></div>
+                            </div>
                         </div>
                         <div class="mini-monitor-section">
                             <div class="incidents-mini">
@@ -1155,52 +1197,107 @@ Report Generated: ${this.formatDateTime(new Date())}`;
 
     updatePatrolStopsList() {
         const list = document.getElementById('patrolStopsListMini');
-        if (!list || !this.currentMission) return;
+        if (!list) return;
 
         let html = '';
-        if (this.currentMission.patrolStops && this.currentMission.patrolStops.length > 0) {
-            this.currentMission.patrolStops.forEach((stop, index) => {
-            html += `
-                <div class="patrol-stop">
-                    <div class="patrol-stop-time">${this.formatDateTime(stop.arrivalTime)} - ${this.formatDateTime(stop.departureTime)}</div>
-                    <div class="patrol-stop-location">${stop.location}</div>
-                    <div style="margin-top: 4px; font-size: 11px;">
-                        ${stop.details || 'No details'}
-                        ${stop.incidents.length > 0 ? ` | Incidents: ${stop.incidents.length}` : ''}
-                        ${stop.checkpoints.length > 0 ? ` | Checkpoints: ${stop.checkpoints.length}` : ''}
+        if (this.currentMission && this.currentMission.patrolStops && this.currentMission.patrolStops.length > 0) {
+            // Show only last 2 patrol stops
+            const recentStops = this.currentMission.patrolStops.slice(-2);
+            const hasMore = this.currentMission.patrolStops.length > 2;
+            
+            recentStops.forEach((stop, index) => {
+                const stopIndex = this.currentMission.patrolStops.indexOf(stop);
+                const hasActivity = stop.incidents.length > 0 || stop.checkpoints.length > 0;
+                html += `
+                    <div class="patrol-stop clickable-card ${hasActivity ? 'active-card' : ''}" 
+                         onclick="app.showPatrolStopDetails(${stopIndex})">
+                        <div class="patrol-stop-time">${this.formatDateTime(stop.arrivalTime)} - ${this.formatDateTime(stop.departureTime)}</div>
+                        <div class="patrol-stop-location">${stop.location}</div>
+                        <div style="margin-top: 4px; font-size: 11px;">
+                            ${stop.details || 'No details'}
+                            ${stop.incidents.length > 0 ? ` | Incidents: ${stop.incidents.length}` : ''}
+                            ${stop.checkpoints.length > 0 ? ` | Checkpoints: ${stop.checkpoints.length}` : ''}
+                        </div>
                     </div>
-                </div>
-            `;
+                `;
             });
+            
+            if (hasMore) {
+                html += `
+                    <div class="show-more-card clickable-card" onclick="app.showAllPatrolStops()">
+                        <div class="show-more-text">View All ${this.currentMission.patrolStops.length} Patrol Stops</div>
+                    </div>
+                `;
+            }
+        } else {
+            html = '<div class="patrol-stop inactive-card">No patrol stops recorded yet.</div>';
         }
 
-        list.innerHTML = html || '<div style="padding: 8px; font-size: 11px; opacity: 0.7;">No patrol stops recorded yet.</div>';
+        list.innerHTML = html;
     }
 
     updateIncidentsList() {
         const list = document.getElementById('incidentsListMini');
-        if (!list || !this.currentMission) return;
+        if (!list) return;
 
         let html = '';
         
-        // Show general incidents
-        if (this.currentMission.incidents && this.currentMission.incidents.length > 0) {
-            this.currentMission.incidents.forEach(incident => {
-            html += `
-                <div class="patrol-stop">
-                    <div class="patrol-stop-time">${this.formatDateTime(incident.time)}</div>
-                    <div class="patrol-stop-location">${incident.location}</div>
-                    <div style="margin-top: 4px; font-size: 11px;">
-                        <strong>${incident.type}</strong><br>
-                        ${incident.description}<br>
-                        <strong>Action:</strong> ${incident.action}
-                    </div>
-                </div>
-            `;
-            });
+        // Collect all incidents (general + from patrol stops)
+        let allIncidents = [];
+        
+        if (this.currentMission) {
+            // Add general incidents
+            if (this.currentMission.incidents && this.currentMission.incidents.length > 0) {
+                allIncidents = [...this.currentMission.incidents];
+            }
+            
+            // Add incidents from patrol stops
+            if (this.currentMission.patrolStops) {
+                this.currentMission.patrolStops.forEach(stop => {
+                    if (stop.incidents && stop.incidents.length > 0) {
+                        allIncidents = [...allIncidents, ...stop.incidents];
+                    }
+                });
+            }
+            
+            // Sort by time (most recent first)
+            allIncidents.sort((a, b) => new Date(b.time) - new Date(a.time));
+            
+            if (allIncidents.length > 0) {
+                // Show only last 2 incidents
+                const recentIncidents = allIncidents.slice(0, 2);
+                const hasMore = allIncidents.length > 2;
+                
+                recentIncidents.forEach((incident, index) => {
+                    html += `
+                        <div class="patrol-stop clickable-card active-card" 
+                             onclick="app.showIncidentDetails(${allIncidents.indexOf(incident)})">
+                            <div class="patrol-stop-time">${this.formatDateTime(incident.time)}</div>
+                            <div class="patrol-stop-location">${incident.location}</div>
+                            <div style="margin-top: 4px; font-size: 11px;">
+                                <strong>${incident.type}</strong><br>
+                                ${incident.description}<br>
+                                <strong>Action:</strong> ${incident.action}
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                if (hasMore) {
+                    html += `
+                        <div class="show-more-card clickable-card" onclick="app.showAllIncidents()">
+                            <div class="show-more-text">View All ${allIncidents.length} Incidents</div>
+                        </div>
+                    `;
+                }
+            } else {
+                html = '<div class="patrol-stop inactive-card">No incidents recorded yet.</div>';
+            }
+        } else {
+            html = '<div class="patrol-stop inactive-card">No incidents recorded yet.</div>';
         }
 
-        list.innerHTML = html || '<div style="padding: 8px; font-size: 11px; opacity: 0.7;">No incidents recorded yet.</div>';
+        list.innerHTML = html;
     }
 
     updateMissionDetails() {
@@ -1256,10 +1353,21 @@ Report Generated: ${this.formatDateTime(new Date())}`;
             detailsContent.innerHTML = html;
             miniMonitor.style.display = 'block';
         } else {
+            // Show inactive state
             if (miniMonitorStatus) {
-                miniMonitorStatus.textContent = 'STANDBY';
+                miniMonitorStatus.textContent = 'INACTIVE';
             }
-            miniMonitor.style.display = 'none';
+            
+            detailsContent.innerHTML = `
+                <h4>Mission Monitor</h4>
+                <div class="mission-detail-item inactive-message">
+                    <strong>Status:</strong> No active mission
+                </div>
+                <div class="mission-detail-item inactive-message">
+                    Select an operation type to begin monitoring
+                </div>
+            `;
+            miniMonitor.style.display = 'block';
         }
     }
 
@@ -1608,10 +1716,10 @@ Report Generated: ${this.formatDateTime(new Date())}`;
                 // Restore the appropriate dashboard
                 if (this.currentMission.type === 'patrol') {
                     this.showPatrolDashboard();
-                    this.updatePatrolStopsList();
                 } else {
                     this.showGenericDashboard(this.currentMission.type);
                 }
+                this.updatePatrolStopsList();
                 this.updateIncidentsList();
                 this.updateMissionDetails();
                 
@@ -2360,6 +2468,286 @@ Report Generated: ${this.formatDateTime(new Date())}`;
             
             this.showNotification('Location removed successfully!');
             this.showLocations();
+        }
+    }
+
+    showPatrolStopDetails(stopIndex) {
+        if (!this.currentMission || !this.currentMission.patrolStops || !this.currentMission.patrolStops[stopIndex]) {
+            return;
+        }
+
+        const stop = this.currentMission.patrolStops[stopIndex];
+        const modal = document.getElementById('logsModal');
+        const modalContent = modal.querySelector('.modal-content');
+        
+        modalContent.innerHTML = `
+            <div class="modal-header">
+                <h2>Patrol Stop Details</h2>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="mission-detail-item">
+                    <strong>Location:</strong> ${stop.location}
+                </div>
+                <div class="mission-detail-item">
+                    <strong>Arrival:</strong> ${this.formatDateTime(stop.arrivalTime)}
+                </div>
+                <div class="mission-detail-item">
+                    <strong>Departure:</strong> ${this.formatDateTime(stop.departureTime)}
+                </div>
+                <div class="mission-detail-item">
+                    <strong>Details:</strong> ${stop.details || 'No details provided'}
+                </div>
+                
+                <h3 style="margin-top: 20px; margin-bottom: 10px;">Checkpoints (${stop.checkpoints.length})</h3>
+                <div id="checkpointsList">
+                    ${stop.checkpoints.length > 0 ? 
+                        stop.checkpoints.map(checkpoint => `
+                            <div class="mission-detail-item">
+                                <strong>${this.formatDateTime(checkpoint.time)}:</strong> ${checkpoint.description}
+                                ${checkpoint.notes ? `<br><em>Notes: ${checkpoint.notes}</em>` : ''}
+                            </div>
+                        `).join('') : 
+                        '<div class="mission-detail-item">No checkpoints recorded</div>'
+                    }
+                </div>
+                
+                <h3 style="margin-top: 20px; margin-bottom: 10px;">Incidents (${stop.incidents.length})</h3>
+                <div id="incidentsList">
+                    ${stop.incidents.length > 0 ? 
+                        stop.incidents.map(incident => `
+                            <div class="mission-detail-item">
+                                <strong>${this.formatDateTime(incident.time)} - ${incident.type}</strong><br>
+                                <strong>Location:</strong> ${incident.location}<br>
+                                <strong>Description:</strong> ${incident.description}<br>
+                                <strong>Action:</strong> ${incident.action}
+                                ${incident.notes ? `<br><em>Notes: ${incident.notes}</em>` : ''}
+                            </div>
+                        `).join('') : 
+                        '<div class="mission-detail-item">No incidents recorded</div>'
+                    }
+                </div>
+                
+                <div class="form-actions">
+                    <button class="control-btn btn-primary" onclick="app.addPatrolStopNote(${stopIndex})">Add Note</button>
+                    <button class="control-btn btn-secondary" onclick="app.closeModal()">Close</button>
+                </div>
+            </div>
+        `;
+        
+        modal.style.display = 'block';
+        this.bindModalEvents();
+    }
+
+    showAllPatrolStops() {
+        if (!this.currentMission || !this.currentMission.patrolStops) {
+            return;
+        }
+
+        const modal = document.getElementById('logsModal');
+        const modalContent = modal.querySelector('.modal-content');
+        
+        modalContent.innerHTML = `
+            <div class="modal-header">
+                <h2>All Patrol Stops (${this.currentMission.patrolStops.length})</h2>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body">
+                ${this.currentMission.patrolStops.map((stop, index) => `
+                    <div class="mission-detail-item clickable-card" onclick="app.showPatrolStopDetails(${index})" style="cursor: pointer; margin-bottom: 12px;">
+                        <strong>${stop.location}</strong><br>
+                        <strong>Time:</strong> ${this.formatDateTime(stop.arrivalTime)} - ${this.formatDateTime(stop.departureTime)}<br>
+                        <strong>Details:</strong> ${stop.details || 'No details'}<br>
+                        <strong>Activity:</strong> ${stop.incidents.length} incidents, ${stop.checkpoints.length} checkpoints
+                    </div>
+                `).join('')}
+                
+                <div class="form-actions">
+                    <button class="control-btn btn-secondary" onclick="app.closeModal()">Close</button>
+                </div>
+            </div>
+        `;
+        
+        modal.style.display = 'block';
+        this.bindModalEvents();
+    }
+
+    showIncidentDetails(incidentIndex) {
+        // Collect all incidents
+        let allIncidents = [];
+        
+        if (this.currentMission) {
+            if (this.currentMission.incidents) {
+                allIncidents = [...this.currentMission.incidents];
+            }
+            
+            if (this.currentMission.patrolStops) {
+                this.currentMission.patrolStops.forEach(stop => {
+                    if (stop.incidents) {
+                        allIncidents = [...allIncidents, ...stop.incidents];
+                    }
+                });
+            }
+        }
+        
+        // Sort by time (most recent first)
+        allIncidents.sort((a, b) => new Date(b.time) - new Date(a.time));
+        
+        if (!allIncidents[incidentIndex]) {
+            return;
+        }
+
+        const incident = allIncidents[incidentIndex];
+        const modal = document.getElementById('logsModal');
+        const modalContent = modal.querySelector('.modal-content');
+        
+        modalContent.innerHTML = `
+            <div class="modal-header">
+                <h2>Incident Details</h2>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="mission-detail-item">
+                    <strong>Type:</strong> ${incident.type}
+                </div>
+                <div class="mission-detail-item">
+                    <strong>Time:</strong> ${this.formatDateTime(incident.time)}
+                </div>
+                <div class="mission-detail-item">
+                    <strong>Location:</strong> ${incident.location}
+                </div>
+                <div class="mission-detail-item">
+                    <strong>Description:</strong> ${incident.description}
+                </div>
+                <div class="mission-detail-item">
+                    <strong>Action Taken:</strong> ${incident.action}
+                </div>
+                ${incident.notes ? `
+                    <div class="mission-detail-item">
+                        <strong>Notes:</strong> ${incident.notes}
+                    </div>
+                ` : ''}
+                
+                <div class="form-actions">
+                    <button class="control-btn btn-primary" onclick="app.addIncidentNote(${incidentIndex})">Add Note</button>
+                    <button class="control-btn btn-secondary" onclick="app.closeModal()">Close</button>
+                </div>
+            </div>
+        `;
+        
+        modal.style.display = 'block';
+        this.bindModalEvents();
+    }
+
+    showAllIncidents() {
+        // Collect all incidents
+        let allIncidents = [];
+        
+        if (this.currentMission) {
+            if (this.currentMission.incidents) {
+                allIncidents = [...this.currentMission.incidents];
+            }
+            
+            if (this.currentMission.patrolStops) {
+                this.currentMission.patrolStops.forEach(stop => {
+                    if (stop.incidents) {
+                        allIncidents = [...allIncidents, ...stop.incidents];
+                    }
+                });
+            }
+        }
+        
+        // Sort by time (most recent first)
+        allIncidents.sort((a, b) => new Date(b.time) - new Date(a.time));
+
+        const modal = document.getElementById('logsModal');
+        const modalContent = modal.querySelector('.modal-content');
+        
+        modalContent.innerHTML = `
+            <div class="modal-header">
+                <h2>All Incidents (${allIncidents.length})</h2>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body">
+                ${allIncidents.length > 0 ? allIncidents.map((incident, index) => `
+                    <div class="mission-detail-item clickable-card" onclick="app.showIncidentDetails(${index})" style="cursor: pointer; margin-bottom: 12px;">
+                        <strong>${incident.type}</strong><br>
+                        <strong>Time:</strong> ${this.formatDateTime(incident.time)}<br>
+                        <strong>Location:</strong> ${incident.location}<br>
+                        <strong>Description:</strong> ${incident.description}<br>
+                        <strong>Action:</strong> ${incident.action}
+                    </div>
+                `).join('') : '<div class="mission-detail-item">No incidents recorded</div>'}
+                
+                <div class="form-actions">
+                    <button class="control-btn btn-secondary" onclick="app.closeModal()">Close</button>
+                </div>
+            </div>
+        `;
+        
+        modal.style.display = 'block';
+        this.bindModalEvents();
+    }
+
+    addPatrolStopNote(stopIndex) {
+        if (!this.currentMission || !this.currentMission.patrolStops || !this.currentMission.patrolStops[stopIndex]) {
+            return;
+        }
+
+        const note = prompt('Add a note to this patrol stop:');
+        if (note && note.trim()) {
+            const stop = this.currentMission.patrolStops[stopIndex];
+            if (!stop.notes) {
+                stop.notes = [];
+            }
+            stop.notes.push({
+                time: new Date(),
+                note: note.trim()
+            });
+            
+            this.saveCurrentMission();
+            this.showNotification('Note added successfully!');
+            this.showPatrolStopDetails(stopIndex); // Refresh the modal
+        }
+    }
+
+    addIncidentNote(incidentIndex) {
+        // Collect all incidents
+        let allIncidents = [];
+        
+        if (this.currentMission) {
+            if (this.currentMission.incidents) {
+                allIncidents = [...this.currentMission.incidents];
+            }
+            
+            if (this.currentMission.patrolStops) {
+                this.currentMission.patrolStops.forEach(stop => {
+                    if (stop.incidents) {
+                        allIncidents = [...allIncidents, ...stop.incidents];
+                    }
+                });
+            }
+        }
+        
+        // Sort by time (most recent first)
+        allIncidents.sort((a, b) => new Date(b.time) - new Date(a.time));
+        
+        if (!allIncidents[incidentIndex]) {
+            return;
+        }
+
+        const note = prompt('Add a note to this incident:');
+        if (note && note.trim()) {
+            const incident = allIncidents[incidentIndex];
+            if (!incident.notes) {
+                incident.notes = note.trim();
+            } else {
+                incident.notes += '\n\n' + new Date().toLocaleString() + ': ' + note.trim();
+            }
+            
+            this.saveCurrentMission();
+            this.showNotification('Note added successfully!');
+            this.showIncidentDetails(incidentIndex); // Refresh the modal
         }
     }
 }
